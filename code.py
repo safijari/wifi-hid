@@ -70,6 +70,10 @@ async def handle_websocket_requests():
                 print(val)
                 if val["type"] == "mousemove":
                     mouse.move(int(val["dx"]), int(val["dy"]))
+                if val["type"] == "click":
+                    mouse.click(Mouse.LEFT_BUTTON)
+                if val["type"] == "rightclick":
+                    mouse.click(Mouse.RIGHT_BUTTON)
                 # print(data)
                 # key = data[0]
                 # keyboard.press(Keycode.A)  # Change this to the appropriate Keycode
@@ -97,3 +101,20 @@ async def main():
 
 
 run(main())
+
+# while True:
+#     try:
+#         # Listen for incoming UDP messages
+#         data, addr = udp_socket.recvfrom(1024)
+        
+#         # Assuming single characters are sent over UDP
+#         if len(data) == 1:
+#             # Convert the received data to uppercase and send as keyboard input
+#             key = chr(data[0]).upper()
+#             keyboard.press(Keycode.KEY_A)  # Change this to the appropriate Keycode
+#             keyboard.release_all()
+
+#     except Exception as e:
+#         print("Error:", e)
+
+#     time.sleep(0.1)  # Adjust the sleep duration as needed
