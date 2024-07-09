@@ -1,0 +1,93 @@
+<html lang="en">
+    <head>
+        <title>Websocket Client</title>
+        <style>
+            #touchpad {
+                width: 300px;
+                height: 300px;
+                background-color: #f0f0f0;
+                touch-action: none; /* Prevent default touch behavior */
+            }
+        </style>
+    </head>
+    <body>
+        <p>CPU temperature: <strong>-</strong>&deg;C</p>
+        <p>NeoPixel Color: <input type="color"></p>
+        <div id="touchpad"></div>
+        <script>
+            let ws = null;
+
+            function startWebsocket() {
+                ws = new WebSocket('ws://' + location.host + '/connect-websocket');
+
+
+                ws.onopen = () => console.log('WebSocket connection opened');
+
+                ws.onclose = function() {
+                    ws = null
+                    setTimeout(startWebsocket, 5000)
+                }
+            }
+
+            startWebsocket();
+
+            // ws.onclose = () => console.log('WebSocket connection closed');
+            // ws.onmessage = event => cpuTemp.textContent = event.data;
+            // ws.onerror = error => cpuTemp.textContent = error;
+
+            const touchpad = document.getElementById('touchpad');
+
+            let startX = 0;
+            let startY = 0;
+            let dx = 0;
+            let dy = 0;
+
+            const sampleInterval = 25; // 100ms = 10 samples per second
+
+            // Event listener for touch start
+            touchpad.addEventListener('touchstart', function(e) {
+                e.preventDefault(); // Prevent default touch behavior
+                const touch = e.touches[0]; // Get the first touch point
+                startX = touch.clientX; // Store initial touch X position
+                startY = touch.clientY; // Store initial touch Y position
+            });
+
+            // Event listener for touch move
+            touchpad.addEventListener('touchmove', function(e) {
+                e.preventDefault(); // Prevent default touch behavior
+                const touch = e.touches[0]; // Get the first touch point
+                const deltaX = touch.clientX - startX; // Calculate delta X
+                const deltaY = touch.clientY - startY; // Calculate delta Y
+
+                // Output the delta values (you can use these values as per your requirement)
+                // console.log(`Delta X: ${deltaX}, Delta Y: ${deltaY}`);
+                dx += deltaX;
+                dy += deltaY;
+
+                // Update startX and startY for the next touch move event
+                startX = touch.clientX;
+                startY = touch.clientY;
+            });
+
+            touchpad.addEventListener('touchtap', function (e) {
+              console.log("tapped?");
+              dx = 100;
+              dy = 100;
+            })
+
+            setInterval(function() {
+            if (dx != 0 && dy != 0) {
+              if (ws) {
+                ws.send(JSON.stringify({"type": "mousemove", "dx": dx, "dy": dy}));
+              } else {
+                console.log("cannot write to websocket, it's not connected")
+              }
+                dx = 0;
+                dy = 0;
+            }
+            }, sampleInterval);
+
+
+        </script>
+    </body>
+</html>
