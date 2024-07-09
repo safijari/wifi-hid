@@ -8,12 +8,38 @@
                 background-color: #f0f0f0;
                 touch-action: none; /* Prevent default touch behavior */
             }
+            #mouseTracker {
+                width: 300px;
+                height: 200px;
+                border: 1px solid #ccc;
+                text-align: center;
+                line-height: 200px;
+                font-size: 24px;
+                cursor: none; /* Hide the default cursor */
+                overflow: hidden; /* Prevents scrollbars if content overflows */
+                position: relative; /* Ensures position context for absolute positioning */
+            }
+
+            #capturedCursor {
+                width: 20px;
+                height: 20px;
+                background-color: red;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                pointer-events: none; /* Allows clicks to pass through */
+                display: none; /* Initially hidden until capture */
+            }
         </style>
     </head>
     <body>
-        <p>CPU temperature: <strong>-</strong>&deg;C</p>
-        <p>NeoPixel Color: <input type="color"></p>
+        <input type="text" id="userInput" onkeydown="if(event.key === 'Enter') processTextInput(true)">
+        <button onclick="processTextInput(false)">Send</button>
+        <div id="mouseTracker">Click and interact here</div>
         <div id="touchpad"></div>
+        <div id="capturedCursor"></div>
+
         <script>
             let ws = null;
 
@@ -39,6 +65,16 @@
             }
 
             startWebsocket();
+
+            function processTextInput(enter) {
+                var userInput = document.getElementById('userInput').value;
+                document.getElementById('userInput').value = '';
+              if (enter) {
+                send({"type": "text_with_enter", "text": userInput});
+                return;
+              }
+                send({"type": "text", "text": userInput});
+            }
 
             const touchpad = document.getElementById('touchpad');
 
@@ -128,10 +164,104 @@
                 }
             });
 
+            document.addEventListener('keydown', handleKeyDown);
+
+            const tracker = document.getElementById('mouseTracker');
+            const capturedCursor = document.getElementById('capturedCursor');
+            let cursorCaptured = false;
+            let leftButtonDown = false;
+            let rightButtonDown = false;
+
+            tracker.addEventListener('mousedown', handleMouseDown);
+            tracker.addEventListener('mouseup', handleMouseUp);
+            tracker.addEventListener('mousemove', handleMouseMove);
+            tracker.addEventListener('contextmenu', handleContextMenu);
+            tracker.addEventListener('wheel', handleScroll);
+
+            tracker.addEventListener("click", async () => {
+                cursorCaptured = true;
+                await tracker.requestPointerLock({});
+            });
+
+            function handleKeyDown(event) {
+              console.log(event);
+                if (cursorCaptured && event.key === 'Escape') {
+                    event.preventDefault();
+                }
+            }
+
+            function handleMouseDown(event) {
+                if (!cursorCaptured) {
+                  return;
+                }
+
+                if (event.button === 0) {
+                leftButtonDown = true;
+                } else if (event.button === 2) {
+                rightButtonDown = true;
+                }
+
+                checkDualButtonClick();
+            }
+
+            function handleMouseUp(event) {
+                if (!cursorCaptured) {
+                  return;
+                }
+
+                if (event.button === 0) {
+                leftButtonDown = false;
+                  send({"type": "click"});
+                } else if (event.button === 2) {
+                rightButtonDown = false;
+                  send({"type": "rightclick"});
+                }
+
+                checkDualButtonClick();
+            }
+
+            function handleMouseMove(event) {
+                if (cursorCaptured) {
+                    // console.log('Mouse Move:', event.movementX, event.movementY);
+                  dx += event.movementX;
+                  dy += event.movementY;
+                }
+            }
+
+            function handleContextMenu(event) {
+                event.preventDefault(); // Prevent default right-click menu
+                // send({"type": "rightclick"});
+
+            }
+
+            function handleScroll(event) {
+                console.log('Scroll:', event);
+            }
+
+            function captureCursor() {
+                cursorCaptured = true;
+                console.log('Cursor Captured!');
+                // Show captured cursor
+                capturedCursor.style.display = 'block';
+            }
+
+            function releaseCursor() {
+                cursorCaptured = false;
+                document.exitPointerLock();
+                console.log('Cursor Released!');
+                // Hide captured cursor
+                capturedCursor.style.display = 'none';
+            }
+
+            function checkDualButtonClick() {
+                if (leftButtonDown && rightButtonDown) {
+                    releaseCursor();
+                }
+            }
 
             setInterval(function() {
             if (dx != 0 && dy != 0) {
-                send({"type": "mousemove", "dx": dx, "dy": dy});
+                send({"type": "mousemove", "dx": dx*3, "dy": dy*3});
                 dx = 0;
                 dy = 0;
             }
