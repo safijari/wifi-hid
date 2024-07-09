@@ -1,6 +1,7 @@
 import time
 import usb_hid
 from adafruit_hid.keyboard import Keyboard
+from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS
 from adafruit_hid.mouse import Mouse
 from adafruit_hid.keycode import Keycode
 import ipaddress
@@ -20,6 +21,7 @@ import wifi
 from adafruit_httpserver import Server, Request, Response, Websocket, GET
 
 keyboard = Keyboard(usb_hid.devices)
+keyboard_layout = KeyboardLayoutUS(keyboard)
 mouse = Mouse(usb_hid.devices)
 pool = socketpool.SocketPool(wifi.radio)
 server = Server(pool, debug=True)
@@ -74,6 +76,11 @@ async def handle_websocket_requests():
                     mouse.click(Mouse.LEFT_BUTTON)
                 if val["type"] == "rightclick":
                     mouse.click(Mouse.RIGHT_BUTTON)
+                if val["type"] == "text":
+                    keyboard_layout.write(val["text"])
+                if val["type"] == "text_with_enter":
+                    keyboard_layout.write(val["text"])
+                    keyboard.send(Keycode.ENTER)
                 # print(data)
                 # key = data[0]
                 # keyboard.press(Keycode.A)  # Change this to the appropriate Keycode
